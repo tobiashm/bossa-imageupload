@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bossanova Sydtur 2019 foto-upload</title>
+  <style>
+    html,
+    body {
+      height: 100%;
+      margin: 0;
+    }
+
+    body {
+      padding: 1em;
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    }
+
+    h1 {
+      text-align: center;
+    }
+
+    .aligner {
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+    }
+
+    #drop {
+      height: 200px;
+      width: 200px;
+      border-radius: 100px;
+      color: #fff;
+      background-color: #baf;
+      font-size: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #drop:active,
+    #drop:focus,
+    #drop:hover {
+      box-shadow: 0 2px 5px #ccc;
+    }
+
+    #drop > input {
+      width: 0.1px;
+      height: 0.1px;
+      opacity: 0;
+      overflow: hidden;
+      position: absolute;
+      z-index: -1;
+    }
+
+    #spinner {
+      display: flex;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.3s ease-in-out;
+    }
+
+    #spinner.shown {
+      opacity: 1;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="aligner">
+    <h1>
+      Bossanova Sydtur 2019<br>
+      foto-upload
+    </h1>
+    <label for="file" id="drop">
+      <input type="file" id="file" accept="image/*">
+      Upload file…
+    </label>
+
+    <div id="list">
+      <h2>Uploaded Files:</h2>
+    </div>
+    <div id="spinner">
+      <!-- By Sam Herbert (@sherb), for everyone. More @ http://goo.gl/7AJzbL -->
+      <svg width="58" height="58" viewBox="0 0 58 58" xmlns="http://www.w3.org/2000/svg">
+        <g fill="none" fill-rule="evenodd">
+          <g transform="translate(2 1)" stroke="currentColor" stroke-width="1.5">
+            <circle cx="42.601" cy="11.462" r="5" fill-opacity="1" fill="currentColor">
+              <animate attributeName="fill-opacity" begin="0s" dur="1.3s" values="1;0;0;0;0;0;0;0" calcMode="linear" repeatCount="indefinite" />
+            </circle>
+            <circle cx="49.063" cy="27.063" r="5" fill-opacity="0" fill="currentColor">
+              <animate attributeName="fill-opacity" begin="0s" dur="1.3s" values="0;1;0;0;0;0;0;0" calcMode="linear" repeatCount="indefinite" />
+            </circle>
+            <circle cx="42.601" cy="42.663" r="5" fill-opacity="0" fill="currentColor">
+              <animate attributeName="fill-opacity" begin="0s" dur="1.3s" values="0;0;1;0;0;0;0;0" calcMode="linear" repeatCount="indefinite" />
+            </circle>
+            <circle cx="27" cy="49.125" r="5" fill-opacity="0" fill="currentColor">
+              <animate attributeName="fill-opacity" begin="0s" dur="1.3s" values="0;0;0;1;0;0;0;0" calcMode="linear" repeatCount="indefinite" />
+            </circle>
+            <circle cx="11.399" cy="42.663" r="5" fill-opacity="0" fill="currentColor">
+              <animate attributeName="fill-opacity" begin="0s" dur="1.3s" values="0;0;0;0;1;0;0;0" calcMode="linear" repeatCount="indefinite" />
+            </circle>
+            <circle cx="4.938" cy="27.063" r="5" fill-opacity="0" fill="currentColor">
+              <animate attributeName="fill-opacity" begin="0s" dur="1.3s" values="0;0;0;0;0;1;0;0" calcMode="linear" repeatCount="indefinite" />
+            </circle>
+            <circle cx="11.399" cy="11.462" r="5" fill-opacity="0" fill="currentColor">
+              <animate attributeName="fill-opacity" begin="0s" dur="1.3s" values="0;0;0;0;0;0;1;0" calcMode="linear" repeatCount="indefinite" />
+            </circle>
+            <circle cx="27" cy="5" r="5" fill-opacity="0" fill="currentColor">
+              <animate attributeName="fill-opacity" begin="0s" dur="1.3s" values="0;0;0;0;0;0;0;1" calcMode="linear" repeatCount="indefinite" />
+            </circle>
+          </g>
+        </g>
+      </svg>
+    </div>
+  </div>
+
+  <script type="text/javascript">
+    var drop = document.getElementById('drop');
+    var list = document.getElementById('list');
+    var spinner = document.getElementById('spinner');
+    var apiBaseURL = 'https://s62aldqzyl.execute-api.eu-west-3.amazonaws.com/dev';
+    var imgBaseURL = 'https://s3.eu-west-3.amazonaws.com/sydtur2019-imageupload/';
+
+    function cancel(event) {
+      event.preventDefault();
+      return false;
+    }
+
+    function handleChange(event) {
+      var files = event.target.files;
+      uploadFiles(files);
+      event.preventDefault();
+      return false;
+    }
+
+    document.getElementById('file').addEventListener('change', handleChange);
+
+    function handleDrop(event) {
+      event.preventDefault();
+      var files = event.dataTransfer.files;
+      uploadFiles(files);
+      return false;
+    }
+
+    function uploadFiles(files) {
+      for (var i = 0; i < files.length; i++) {
+        var file = files[i];
+        var reader = new FileReader();
+        reader.addEventListener('loadend', function () {
+          spinner.classList.add('shown');
+          fetch(apiBaseURL + '/requestUploadURL', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              name: file.name,
+              type: file.type
+            })
+          })
+            .then(function (response) {
+              return response.json();
+            })
+            .then(function (json) {
+              return fetch(json.uploadURL, {
+                method: 'PUT',
+                body: new Blob([reader.result], { type: file.type })
+              }).then(() => json.Key)
+            })
+            .then(function (filename) {
+              spinner.classList.remove('shown');
+              var uploadedFileNode = document.createElement('div');
+              uploadedFileNode.innerHTML = '<a href="' + imgBaseURL + encodeURIComponent(filename) + '">' + file.name + '</a>';
+              list.appendChild(uploadedFileNode);
+            });
+        });
+        reader.readAsArrayBuffer(file);
+      }
+    }
+
+    // Tells the browser that we *can* drop on this target
+    drop.addEventListener('dragenter', cancel);
+    drop.addEventListener('dragover', cancel);
+    drop.addEventListener('drop', handleDrop);
+
+  </script>
+</body>
+
+</html>
